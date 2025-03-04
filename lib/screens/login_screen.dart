@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'registration_screen.dart';
 import 'todo_list_overview_screen.dart';
+import 'registration_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -24,8 +25,8 @@ class _LoginScreenState extends State<LoginScreen> {
       });
       try {
         await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: _emailController.text,
-          password: _passwordController.text,
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
         );
         Navigator.pushReplacement(
           context,
@@ -55,6 +56,13 @@ class _LoginScreenState extends State<LoginScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const RegistrationScreen()),
+    );
+  }
+
+  void navigateToForgotPassword() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
     );
   }
 
@@ -93,10 +101,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 style: const TextStyle(color: Colors.white),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
+                  if (value == null || value.trim().isEmpty) {
                     return 'Please enter an email address';
                   }
-                  if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+                  if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value.trim())) {
                     return 'Please enter a valid email address';
                   }
                   return null;
@@ -129,14 +137,25 @@ class _LoginScreenState extends State<LoginScreen> {
                 obscureText: !_passwordVisible,
                 style: const TextStyle(color: Colors.white),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
+                  if (value == null || value.trim().isEmpty) {
                     return 'Please enter a password';
                   }
-                  if (value.length < 6) {
+                  if (value.trim().length < 6) {
                     return 'Password must be at least 6 characters long';
                   }
                   return null;
                 },
+              ),
+              const SizedBox(height: 20),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: navigateToForgotPassword,
+                  child: const Text(
+                    'Forgot Password?',
+                    style: TextStyle(color: Colors.blue),
+                  ),
+                ),
               ),
               const SizedBox(height: 20),
               SizedBox(
@@ -146,7 +165,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: ElevatedButton.styleFrom(
                     foregroundColor: Colors.black, backgroundColor: const Color.fromARGB(158, 255, 255, 255),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16.0),
+                      borderRadius: BorderRadius.circular(8.0),
                     ),
                     padding: const EdgeInsets.all(0.0),
                     elevation: 5,
@@ -161,7 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           Color(0xFF42A5F5),
                         ],
                       ),
-                      borderRadius: BorderRadius.circular(16.0),
+                      borderRadius: BorderRadius.circular(8.0),
                     ),
                     child: Container(
                       constraints: const BoxConstraints(minHeight: 50.0),

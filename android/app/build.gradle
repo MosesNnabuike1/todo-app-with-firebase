@@ -23,7 +23,7 @@ android {
         applicationId = "com.example.todo_app_updated"
         minSdk = 23
         targetSdk = flutter.targetSdkVersion
-        versionCode = 1002 // Increase this value
+        versionCode = 5000 // Increase this value to be higher than 4000
         versionName = flutter.versionName
     }
 

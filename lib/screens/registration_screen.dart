@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart';
 import 'login_screen.dart';
 
 class RegistrationScreen extends StatefulWidget {
@@ -27,20 +28,22 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       setState(() {
         _isLoading = true;
       });
-      if (_passwordController.text == _confirmPasswordController.text) {
+      if (_passwordController.text.trim() == _confirmPasswordController.text.trim()) {
         try {
+          print('Attempting to register...');
           UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-            email: _emailController.text,
-            password: _passwordController.text,
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
           );
           User? user = userCredential.user;
           if (user != null) {
             await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-              'username': _usernameController.text,
-              'phone': _phoneController.text,
-              'email': _emailController.text,
+              'username': _usernameController.text.trim(),
+              'phone': _phoneController.text.trim(),
+              'email': _emailController.text.trim(),
             });
           }
+          print('Registration successful');
           showDialog(
             context: context,
             builder: (BuildContext context) {
@@ -62,10 +65,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             },
           );
         } on FirebaseAuthException catch (e) {
+          print('FirebaseAuthException: $e');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(e.message ?? 'Registration failed')),
           );
         } catch (e) {
+          print('Exception: $e');
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Network error, please try again later')),
           );
@@ -132,8 +137,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     ),
                   ),
                   style: const TextStyle(color: Colors.white),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
+                  ],
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.trim().isEmpty) {
                       return 'Please enter a username';
                     }
                     return null;
@@ -153,8 +161,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     ),
                   ),
                   style: const TextStyle(color: Colors.white),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                  ],
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.trim().isEmpty) {
                       return 'Please enter a phone number';
                     }
                     return null;
@@ -174,11 +185,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     ),
                   ),
                   style: const TextStyle(color: Colors.white),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9@.]')),
+                  ],
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.trim().isEmpty) {
                       return 'Please enter an email address';
                     }
-                    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+                    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value.trim())) {
                       return 'Please enter a valid email address';
                     }
                     return null;
@@ -210,11 +224,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   ),
                   obscureText: !_passwordVisible,
                   style: const TextStyle(color: Colors.white),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9@#\$&*]')),
+                  ],
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.trim().isEmpty) {
                       return 'Please enter a password';
                     }
-                    if (value.length < 6) {
+                    if (value.trim().length < 6) {
                       return 'Password must be at least 6 characters long';
                     }
                     return null;
@@ -246,11 +263,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   ),
                   obscureText: !_confirmPasswordVisible,
                   style: const TextStyle(color: Colors.white),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9@#\$&*]')),
+                  ],
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.trim().isEmpty) {
                       return 'Please confirm your password';
                     }
-                    if (value != _passwordController.text) {
+                    if (value.trim() != _passwordController.text.trim()) {
                       return 'Passwords do not match';
                     }
                     return null;
@@ -264,15 +284,34 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     style: ElevatedButton.styleFrom(
                       foregroundColor: Colors.black, backgroundColor: const Color.fromARGB(158, 255, 255, 255),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16.0),
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                      padding: const EdgeInsets.all(0.0),
+                      elevation: 5,
+                      shadowColor: Colors.black,
+                    ),
+                    child: Ink(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: <Color>[
+                            Color(0xFF0D47A1),
+                            Color(0xFF1976D2),
+                            Color(0xFF42A5F5),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                      child: Container(
+                        constraints: const BoxConstraints(minHeight: 50.0),
+                        alignment: Alignment.center,
+                        child: _isLoading
+                            ? const CircularProgressIndicator(color: Colors.black)
+                            : const Text(
+                                'Register',
+                                style: TextStyle(fontSize: 18, color: Colors.black),
+                              ),
                       ),
                     ),
-                    child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.black)
-                        : const Text(
-                            'Register',
-                            style: TextStyle(fontSize: 18, color: Colors.black),
-                          ),
                   ),
                 ),
                 const SizedBox(height: 20),

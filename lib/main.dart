@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'screens/login_screen.dart';
 import 'screens/registration_screen.dart';
 import 'screens/todo_list_overview_screen.dart';
-import 'screens/welcome_screen.dart';
+import 'screens/forgot_password_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,7 +20,6 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Todo App',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
         brightness: Brightness.dark,
         scaffoldBackgroundColor: const Color(0xFF1E1E2C),
         appBarTheme: const AppBarTheme(
@@ -31,13 +31,34 @@ class MyApp extends StatelessWidget {
           bodyMedium: TextStyle(color: Colors.white),
         ),
       ),
-      home: const LoginScreen(),
+      home: const AuthWrapper(),
       routes: {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegistrationScreen(),
         '/overview': (context) => const TodoListOverviewScreen(),
+        '/forgot_password': (context) => const ForgotPasswordScreen(),
       },
       debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasData) {
+          return const TodoListOverviewScreen();
+        } else {
+          return const LoginScreen();
+        }
+      },
     );
   }
 }
