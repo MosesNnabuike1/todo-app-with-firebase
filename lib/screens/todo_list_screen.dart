@@ -1,78 +1,69 @@
-import 'package:flutter/material.dart'; // Import Flutter material package for UI components
-import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore package for database operations
-import 'package:firebase_auth/firebase_auth.dart'; // Import Firebase Auth package for authentication
-import 'package:todoapp_improved/task.dart'; // Import the Task model
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:todoapp_improved/task.dart';
 
-// Define a stateful widget for the TodoListScreen
 class TodoListScreen extends StatefulWidget {
-  final String listTitle; // Title of the todo list
-  final String listId; // ID of the todo list
+  final String listTitle;
+  final String listId;
 
-  // Constructor to initialize the listTitle and listId
   const TodoListScreen(
       {super.key, required this.listTitle, required this.listId});
 
   @override
-  _TodoListScreenState createState() =>
-      _TodoListScreenState(); // Create the state for this widget
+  _TodoListScreenState createState() => _TodoListScreenState();
 }
 
-// Define the state for the TodoListScreen
 class _TodoListScreenState extends State<TodoListScreen>
     with SingleTickerProviderStateMixin {
-  List<Task> tasks = []; // List to store tasks
-  late AnimationController
-      _controller; // Animation controller for task animations
-  bool _isLoading = true; // Variable to track loading state
+  List<Task> tasks = [];
+  late AnimationController _controller;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    // Initialize the animation controller
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 300), // Duration of the animation
-      vsync: this, // Provide the vsync for the animation
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
     );
-    _loadTasksFromFirestore(); // Load tasks from Firestore when the widget is initialized
+    _loadTasks();
   }
 
   @override
   void dispose() {
-    _controller
-        .dispose(); // Dispose the animation controller when the widget is disposed
+    _controller.dispose();
     super.dispose();
   }
 
-  // Load tasks from Firestore
-  Future<void> _loadTasksFromFirestore() async {
-    final user = FirebaseAuth.instance.currentUser; // Get the current user
+  Future<void> _loadTasks() async {
+    final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      // Get the tasks collection for the current user and list
       final tasksCollection = FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .collection('lists')
           .doc(widget.listId)
           .collection('tasks');
-      final snapshot =
-          await tasksCollection.get(); // Get the tasks from Firestore
+      final snapshot = await tasksCollection.get();
       if (mounted) {
         setState(() {
-          // Update the tasks list with the data from Firestore
           tasks = snapshot.docs
-              .map((doc) =>
-                  Task(title: doc['title'], isCompleted: doc['isCompleted']))
+              .map((doc) => Task(
+                    id: doc.id, // Assign the Firestore document ID
+                    title: doc['title'],
+                    isCompleted: doc['isCompleted'],
+                  ))
               .toList();
-          _isLoading = false; // Set loading state to false
-          _controller.forward(from: 0.0); // Start the animation
+          _isLoading = false;
+          _controller.forward(from: 0.0);
         });
       }
     }
   }
 
-  // Add a new task
   Future<void> _addTask(String taskTitle) async {
-    final user = FirebaseAuth.instance.currentUser; // Get the current user
+    final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       final tasksCollection = FirebaseFirestore.instance
           .collection('users')
@@ -80,18 +71,18 @@ class _TodoListScreenState extends State<TodoListScreen>
           .collection('lists')
           .doc(widget.listId)
           .collection('tasks');
-      await tasksCollection.doc(taskTitle).set({
+      final newTaskDoc = tasksCollection.doc(); // Generate unique ID
+      await newTaskDoc.set({
+        'id': newTaskDoc.id, // Store the generated ID in the document
         'title': taskTitle,
         'isCompleted': false,
-      }); // Add the new task to Firestore
-      _loadTasksFromFirestore(); // Reload tasks from Firestore to ensure state is in sync
+      });
+      _loadTasks();
     }
   }
 
-  // Delete a task
-  Future<void> _deleteTask(int index) async {
-    if (index < 0 || index >= tasks.length) return; // Check for valid index
-    final user = FirebaseAuth.instance.currentUser; // Get the current user
+  Future<void> _deleteTask(String taskId) async {
+    final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       final tasksCollection = FirebaseFirestore.instance
           .collection('users')
@@ -99,18 +90,13 @@ class _TodoListScreenState extends State<TodoListScreen>
           .collection('lists')
           .doc(widget.listId)
           .collection('tasks');
-      final taskTitle = tasks[index].title;
-      await tasksCollection
-          .doc(taskTitle)
-          .delete(); // Delete the task from Firestore
-      _loadTasksFromFirestore(); // Reload tasks from Firestore to ensure state is in sync
+      await tasksCollection.doc(taskId).delete(); // Delete by unique task ID
+      _loadTasks(); // Reload the tasks to reflect the change
     }
   }
 
-  // Edit a task
-  Future<void> _editTask(int index, String newTitle) async {
-    if (index < 0 || index >= tasks.length) return; // Check for valid index
-    final user = FirebaseAuth.instance.currentUser; // Get the current user
+  Future<void> _editTask(String taskId, String newTitle) async {
+    final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       final tasksCollection = FirebaseFirestore.instance
           .collection('users')
@@ -118,22 +104,24 @@ class _TodoListScreenState extends State<TodoListScreen>
           .collection('lists')
           .doc(widget.listId)
           .collection('tasks');
-      final taskTitle = tasks[index].title;
-      await tasksCollection
-          .doc(taskTitle)
-          .delete(); // Delete the old task from Firestore
-      await tasksCollection.doc(newTitle).set({
+
+      // Update the task title directly using its unique taskId
+      await tasksCollection.doc(taskId).update({
         'title': newTitle,
-        'isCompleted': tasks[index].isCompleted,
-      }); // Add the edited task to Firestore
-      _loadTasksFromFirestore(); // Reload tasks from Firestore to ensure state is in sync
+      });
+
+      // Update the local state for the task
+      final taskIndex = tasks.indexWhere((task) => task.id == taskId);
+      if (taskIndex != -1) {
+        setState(() {
+          tasks[taskIndex].title = newTitle;
+        });
+      }
     }
   }
 
-  // Toggle the completion status of a task
-  Future<void> _toggleTaskCompletion(int index) async {
-    if (index < 0 || index >= tasks.length) return; // Check for valid index
-    final user = FirebaseAuth.instance.currentUser; // Get the current user
+  Future<void> _toggleTaskCompletion(String taskId) async {
+    final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       final tasksCollection = FirebaseFirestore.instance
           .collection('users')
@@ -141,47 +129,53 @@ class _TodoListScreenState extends State<TodoListScreen>
           .collection('lists')
           .doc(widget.listId)
           .collection('tasks');
-      final taskTitle = tasks[index].title;
-      await tasksCollection.doc(taskTitle).update({
-        'isCompleted': !tasks[index].isCompleted,
-      }); // Toggle the completion status in Firestore
-      _loadTasksFromFirestore(); // Reload tasks from Firestore to ensure state is in sync
+      final taskIndex =
+          tasks.indexWhere((task) => task.id == taskId); // Find index by ID
+      if (taskIndex == -1) return; // Task not found
+
+      await tasksCollection.doc(taskId).update({
+        'isCompleted':
+            !tasks[taskIndex].isCompleted, // Toggle status in Firestore
+      });
+
+      setState(() {
+        tasks[taskIndex].isCompleted =
+            !tasks[taskIndex].isCompleted; // Update local state
+      });
     }
   }
 
-  // Confirm deletion of a task
-  Future<bool?> _confirmDeleteTask(int index) async {
+  Future<bool?> _confirmDeleteTask(String taskId) async {
     return showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor:
-              const Color(0xFF1E1E2C), // Set the background color of the dialog
-          title: const Text('Delete Task',
-              style: TextStyle(
-                  color: Colors.white)), // Set the title of the dialog
-          content: const Text('Are you sure you want to delete this task?',
-              style: TextStyle(
-                  color: Colors.white)), // Set the content of the dialog
+          backgroundColor: const Color(0xFF1E1E2C),
+          title: const Text(
+            'Delete Task',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: const Text(
+            'Are you sure you want to delete this task?',
+            style: TextStyle(color: Colors.white),
+          ),
           actions: <Widget>[
             TextButton(
-              child: const Text('Cancel',
-                  style: TextStyle(
-                      color: Colors
-                          .white)), // Set the text and style for the cancel button
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white),
+              ),
               onPressed: () {
-                Navigator.of(context)
-                    .pop(false); // Close the dialog and return false
+                Navigator.of(context).pop(false);
               },
             ),
             TextButton(
-              child: const Text('Delete',
-                  style: TextStyle(
-                      color: Colors
-                          .red)), // Set the text and style for the delete button
+              child: const Text(
+                'Delete',
+                style: TextStyle(color: Colors.red),
+              ),
               onPressed: () {
-                Navigator.of(context)
-                    .pop(true); // Close the dialog and return true
+                Navigator.of(context).pop(true);
               },
             ),
           ],
@@ -190,22 +184,18 @@ class _TodoListScreenState extends State<TodoListScreen>
     );
   }
 
-  // Show the dialog to add a new task
   void _showAddTaskDialog() {
-    TextEditingController controller =
-        TextEditingController(); // Create a controller for the text field
+    TextEditingController controller = TextEditingController();
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor:
-              const Color(0xFF1E1E2C), // Set the background color of the dialog
-          title: const Text('Add New Task',
-              style: TextStyle(
-                  color: Colors.white)), // Set the title of the dialog
+          backgroundColor: const Color(0xFF1E1E2C),
+          title:
+              const Text('Add New Task', style: TextStyle(color: Colors.white)),
           content: TextField(
-            controller: controller, // Set the controller for the text field
-            style: const TextStyle(color: Colors.white), // Set the text style
+            controller: controller,
+            style: const TextStyle(color: Colors.white),
             decoration: const InputDecoration(
               hintText: "Enter task",
               hintStyle: TextStyle(color: Colors.white54),
@@ -219,23 +209,18 @@ class _TodoListScreenState extends State<TodoListScreen>
           ),
           actions: <Widget>[
             TextButton(
-              child: const Text('Cancel',
-                  style: TextStyle(
-                      color: Colors
-                          .white)), // Set the text and style for the cancel button
+              child:
+                  const Text('Cancel', style: TextStyle(color: Colors.white)),
               onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
+                Navigator.of(context).pop();
               },
             ),
             TextButton(
-              child: const Text('Add',
-                  style: TextStyle(
-                      color: Colors
-                          .white)), // Set the text and style for the add button
+              child: const Text('Add', style: TextStyle(color: Colors.white)),
               onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
+                Navigator.of(context).pop();
                 if (controller.text.trim().isNotEmpty) {
-                  _addTask(controller.text.trim()); // Add the new task
+                  _addTask(controller.text.trim());
                 }
               },
             ),
@@ -245,24 +230,23 @@ class _TodoListScreenState extends State<TodoListScreen>
     );
   }
 
-  // Show the dialog to edit a task
-  void _showEditTaskDialog(int index) {
-    if (index < 0 || index >= tasks.length) return; // Check for valid index
-    TextEditingController controller = TextEditingController(
-        text: tasks[index]
-            .title); // Create a controller with the current task title
+  void _showEditTaskDialog(String taskId) {
+    final taskIndex =
+        tasks.indexWhere((task) => task.id == taskId); // Find index by ID
+    if (taskIndex == -1) return; // If task is not found, exit early
+
+    TextEditingController controller =
+        TextEditingController(text: tasks[taskIndex].title);
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor:
-              const Color(0xFF1E1E2C), // Set the background color of the dialog
-          title: const Text('Edit Task',
-              style: TextStyle(
-                  color: Colors.white)), // Set the title of the dialog
+          backgroundColor: const Color(0xFF1E1E2C),
+          title: const Text('Edit Task', style: TextStyle(color: Colors.white)),
           content: TextField(
-            controller: controller, // Set the controller for the text field
-            style: const TextStyle(color: Colors.white), // Set the text style
+            controller: controller,
+            style: const TextStyle(color: Colors.white),
             decoration: const InputDecoration(
               hintText: "Enter task",
               hintStyle: TextStyle(color: Colors.white54),
@@ -276,23 +260,23 @@ class _TodoListScreenState extends State<TodoListScreen>
           ),
           actions: <Widget>[
             TextButton(
-              child: const Text('Cancel',
-                  style: TextStyle(
-                      color: Color(
-                          0xFF6C63FF))), // Set the text and style for the cancel button
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Color(0xFF6C63FF)),
+              ),
               onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
+                Navigator.of(context).pop();
               },
             ),
             TextButton(
-              child: const Text('Save',
-                  style: TextStyle(
-                      color: Color(
-                          0xFF6C63FF))), // Set the text and style for the save button
+              child: const Text(
+                'Save',
+                style: TextStyle(color: Color(0xFF6C63FF)),
+              ),
               onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
+                Navigator.of(context).pop();
                 if (controller.text.trim().isNotEmpty) {
-                  _editTask(index, controller.text.trim()); // Edit the task
+                  _editTask(taskId, controller.text.trim());
                 }
               },
             ),
@@ -304,7 +288,6 @@ class _TodoListScreenState extends State<TodoListScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Separate tasks into incomplete and completed tasks
     List<Task> incompleteTasks =
         tasks.where((task) => !task.isCompleted).toList();
     List<Task> completedTasks =
@@ -312,25 +295,22 @@ class _TodoListScreenState extends State<TodoListScreen>
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor:
-            const Color(0xFF1E1E2C), // Set the background color of the app bar
-        title: Text(widget.listTitle), // Set the title of the app bar
+        backgroundColor: const Color(0xFF1E1E2C),
+        title: Text(widget.listTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.sync),
-            onPressed: _loadTasksFromFirestore,
+            onPressed: _loadTasks,
           ),
         ],
       ),
-      backgroundColor:
-          const Color(0xFF1E1E2C), // Set the background color of the scaffold
+      backgroundColor: const Color(0xFF1E1E2C),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator()) // Show loader while loading
+          ? const Center(child: CircularProgressIndicator())
           : tasks.isEmpty
               ? const Center(
                   child: Text(
-                    'No tasks added yet', // Show message if no tasks
+                    'No tasks added yet',
                     style: TextStyle(color: Colors.white70, fontSize: 18.0),
                   ),
                 )
@@ -361,7 +341,8 @@ class _TodoListScreenState extends State<TodoListScreen>
                                   curve: Curves.easeInOut,
                                 ),
                                 child: Dismissible(
-                                  key: Key(incompleteTasks[index].title),
+                                  key: Key(incompleteTasks[index]
+                                      .id), // Use taskId as the key
                                   background: Container(
                                     color: Colors.red,
                                     alignment: Alignment.centerLeft,
@@ -381,14 +362,18 @@ class _TodoListScreenState extends State<TodoListScreen>
                                   confirmDismiss: (direction) async {
                                     if (direction ==
                                         DismissDirection.endToStart) {
-                                      _showEditTaskDialog(index);
+                                      _showEditTaskDialog(incompleteTasks[index]
+                                          .id); // Use taskId
                                       return false;
                                     } else if (direction ==
                                         DismissDirection.startToEnd) {
                                       final bool? confirmed =
-                                          await _confirmDeleteTask(index);
+                                          await _confirmDeleteTask(
+                                              incompleteTasks[index]
+                                                  .id); // Use taskId
                                       if (confirmed == true) {
-                                        _deleteTask(index);
+                                        _deleteTask(incompleteTasks[index]
+                                            .id); // Use taskId
                                       }
                                       return confirmed;
                                     }
@@ -413,7 +398,9 @@ class _TodoListScreenState extends State<TodoListScreen>
                                                 : Colors.white,
                                           ),
                                           onPressed: () =>
-                                              _toggleTaskCompletion(index),
+                                              _toggleTaskCompletion(
+                                                  incompleteTasks[index]
+                                                      .id), // Use taskId
                                         ),
                                       ),
                                       title: Text(
@@ -454,7 +441,8 @@ class _TodoListScreenState extends State<TodoListScreen>
                                   curve: Curves.easeInOut,
                                 ),
                                 child: Dismissible(
-                                  key: Key(completedTasks[index].title),
+                                  key: Key(completedTasks[index]
+                                      .id), // Use taskId as the key
                                   background: Container(
                                     color: Colors.red,
                                     alignment: Alignment.centerLeft,
@@ -474,14 +462,18 @@ class _TodoListScreenState extends State<TodoListScreen>
                                   confirmDismiss: (direction) async {
                                     if (direction ==
                                         DismissDirection.endToStart) {
-                                      _showEditTaskDialog(index);
+                                      _showEditTaskDialog(completedTasks[index]
+                                          .id); // Pass taskId
                                       return false;
                                     } else if (direction ==
                                         DismissDirection.startToEnd) {
                                       final bool? confirmed =
-                                          await _confirmDeleteTask(index);
+                                          await _confirmDeleteTask(
+                                              completedTasks[index]
+                                                  .id); // Pass taskId
                                       if (confirmed == true) {
-                                        _deleteTask(index);
+                                        _deleteTask(completedTasks[index]
+                                            .id); // Pass taskId
                                       }
                                       return confirmed;
                                     }
@@ -506,7 +498,9 @@ class _TodoListScreenState extends State<TodoListScreen>
                                                 : Colors.white,
                                           ),
                                           onPressed: () =>
-                                              _toggleTaskCompletion(index),
+                                              _toggleTaskCompletion(
+                                                  completedTasks[index]
+                                                      .id), // Pass taskId
                                         ),
                                       ),
                                       title: Text(

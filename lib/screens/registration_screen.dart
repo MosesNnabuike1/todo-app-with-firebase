@@ -130,7 +130,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     filled: true,
                     fillColor: const Color.fromARGB(29, 70, 69, 69),
                     labelText: 'Username',
-                    labelStyle: const TextStyle(color: Colors.white70),
+                    labelStyle: const TextStyle(color: Color.fromARGB(40, 255, 255, 255)),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8.0),
                       borderSide: BorderSide.none,
@@ -154,7 +154,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     filled: true,
                     fillColor: const Color.fromARGB(29, 70, 69, 69),
                     labelText: 'Phone Number',
-                    labelStyle: const TextStyle(color: Colors.white70),
+                    labelStyle: const TextStyle(color: Color.fromARGB(40, 255, 255, 255)),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8.0),
                       borderSide: BorderSide.none,
@@ -178,7 +178,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     filled: true,
                     fillColor: const Color.fromARGB(29, 70, 69, 69),
                     labelText: 'Email Address',
-                    labelStyle: const TextStyle(color: Colors.white70),
+                    labelStyle: const TextStyle(color: Color.fromARGB(40, 255, 255, 255)),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8.0),
                       borderSide: BorderSide.none,
@@ -205,7 +205,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     filled: true,
                     fillColor: const Color.fromARGB(29, 70, 69, 69),
                     labelText: 'Password',
-                    labelStyle: const TextStyle(color: Colors.white70),
+                    labelStyle: const TextStyle(color: Color.fromARGB(40, 255, 255, 255)),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8.0),
                       borderSide: BorderSide.none,
@@ -244,7 +244,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     filled: true,
                     fillColor: const Color.fromARGB(29, 70, 69, 69),
                     labelText: 'Confirm Password',
-                    labelStyle: const TextStyle(color: Colors.white70),
+                    labelStyle: const TextStyle(color: Color.fromARGB(40, 255, 255, 255)),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8.0),
                       borderSide: BorderSide.none,
